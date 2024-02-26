@@ -1,0 +1,141 @@
+{
+ "cells": [
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "id": "696a113c",
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "Authoritative Server is running...\n"
+     ]
+    }
+   ],
+   "source": [
+    "import socket\n",
+    "import json\n",
+    "\n",
+    "# Simple database to store DNS records (in this example, a dictionary)\n",
+    "dns_records = {}\n",
+    "\n",
+    "def load_dns_records():\n",
+    "    \"\"\"\n",
+    "    Load previously saved DNS records\n",
+    "    \"\"\"\n",
+    "    try:\n",
+    "        with open(\"dns_records.json\", \"r\") as f:\n",
+    "            dns_records.update(json.load(f))\n",
+    "    except FileNotFoundError:\n",
+    "        pass\n",
+    "\n",
+    "def save_dns_records():\n",
+    "    \"\"\"\n",
+    "    Save DNS records to file\n",
+    "    \"\"\"\n",
+    "    with open(\"dns_records.json\", \"w\") as f:\n",
+    "        json.dump(dns_records, f)\n",
+    "\n",
+    "def register_dns(data):\n",
+    "    \"\"\"\n",
+    "    Handle registration requests and save the records to the dns_records dictionary\n",
+    "    \"\"\"\n",
+    "    lines = data.splitlines()\n",
+    "    record = {line.split('=')[0]: line.split('=')[1] for line in lines}\n",
+    "    if 'NAME' in record and 'VALUE' in record and 'TYPE' in record and 'TTL' in record:\n",
+    "        # Save the record to dns_records\n",
+    "        dns_records[record['NAME']] = {\n",
+    "            'TYPE': record['TYPE'],\n",
+    "            'VALUE': record['VALUE'],\n",
+    "            'TTL': record['TTL']\n",
+    "        }\n",
+    "        save_dns_records()\n",
+    "        return True\n",
+    "    return False\n",
+    "\n",
+    "def handle_dns_query(data):\n",
+    "    \"\"\"\n",
+    "    Handle DNS queries and return record information\n",
+    "    \"\"\"\n",
+    "    lines = data.splitlines()\n",
+    "    query = {line.split('=')[0]: line.split('=')[1] for line in lines}\n",
+    "    if 'NAME' in query and 'TYPE' in query:\n",
+    "        # Look up the record\n",
+    "        record = dns_records.get(query['NAME'])\n",
+    "        if record and record['TYPE'] == query['TYPE']:\n",
+    "            response = f\"TYPE={record['TYPE']}\\nNAME={query['NAME']}\\nVALUE={record['VALUE']}\\nTTL={record['TTL']}\\n\"\n",
+    "            return response.encode()\n",
+    "    return b\"\"\n",
+    "\n",
+    "print(\"Authoritative Server is running...\")\n",
+    "load_dns_records()\n",
+    "try:\n",
+    "    sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)\n",
+    "    sock.bind(('0.0.0.0', 53533))\n",
+    "    while True:\n",
+    "        data, addr = sock.recvfrom(1024)\n",
+    "        message = data.decode()\n",
+    "        \n",
+    "        # Process registration or query based on the received message type\n",
+    "        if message.startswith('TYPE=A\\n'):\n",
+    "            if 'VALUE' in message:\n",
+    "                # This is a registration request\n",
+    "                if register_dns(message):\n",
+    "                    print(f\"Registered: {message}\")\n",
+    "                else:\n",
+    "                    print(f\"Failed to register: {message}\")\n",
+    "            else:\n",
+    "                # This is a query request\n",
+    "                response = handle_dns_query(message)\n",
+    "                if response:\n",
+    "                    sock.sendto(response, addr)\n",
+    "                    print(f\"Responded to query: {message}\")\n",
+    "                else:\n",
+    "                    print(f\"No DNS record found for query: {message}\")\n",
+    "except KeyboardInterrupt:\n",
+    "    print(\"Authoritative Server is shutting down...\")\n",
+    "finally:\n",
+    "    sock.close()"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "id": "9595b3e7",
+   "metadata": {},
+   "outputs": [],
+   "source": []
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "id": "cbeadd8c",
+   "metadata": {},
+   "outputs": [],
+   "source": []
+  }
+ ],
+ "metadata": {
+  "kernelspec": {
+   "display_name": "Python 3 (ipykernel)",
+   "language": "python",
+   "name": "python3"
+  },
+  "language_info": {
+   "codemirror_mode": {
+    "name": "ipython",
+    "version": 3
+   },
+   "file_extension": ".py",
+   "mimetype": "text/x-python",
+   "name": "python",
+   "nbconvert_exporter": "python",
+   "pygments_lexer": "ipython3",
+   "version": "3.11.4"
+  }
+ },
+ "nbformat": 4,
+ "nbformat_minor": 5
+}
